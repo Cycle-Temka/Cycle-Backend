@@ -1,15 +1,13 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"learning-gin/pkg/config"
+	"learning-gin/pkg/database"
 )
 
 func main() {
-	server := gin.Default()
+	config.InitConfig()
 
-	runErr := server.Run("localhost:8000")
+	database.ConnectDB()
 
-	if runErr != nil {
-		panic(runErr)
-	}
 }
