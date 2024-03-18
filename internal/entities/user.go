@@ -1,4 +1,4 @@
-package entitites
+package entities
 
 type UserBase struct {
 	Login string `json:"login"`

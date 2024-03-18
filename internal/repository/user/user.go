@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
-	"learning-gin/internal/entitites"
+	"learning-gin/internal/entities"
 	"learning-gin/internal/repository"
 )
 
@@ -18,7 +18,7 @@ func InitUserRepo(db *sqlx.DB) repository.User {
 	}
 }
 
-func (usr User) Create(ctx context.Context, userCreate entitites.UserCreate) (int, error) {
+func (usr User) Create(ctx context.Context, userCreate entities.UserCreate) (int, error) {
 	transaction, err := usr.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -27,6 +27,7 @@ func (usr User) Create(ctx context.Context, userCreate entitites.UserCreate) (in
 	var userID int
 
 	// 10 - сложность хэш-функции
+	// TODO. Хэширование убрать в сервисный слой
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(userCreate.Password), 10)
 
 	row := transaction.QueryRowContext(
@@ -45,13 +46,13 @@ func (usr User) Create(ctx context.Context, userCreate entitites.UserCreate) (in
 	return userID, nil
 }
 
-func (usr User) Get(ctx context.Context, userID int) (entitites.User, error) {
-	var user entitites.User
+func (usr User) Get(ctx context.Context, userID int) (entities.User, error) {
+	var user entities.User
 
 	err := usr.db.QueryRowContext(ctx, `SELECT id, login, name FROM users WHERE users.id = $1;`,
 		userID).Scan(&user.ID, &user.Login, &user.Name)
 	if err != nil {
-		return entitites.User{}, err
+		return entities.User{}, err
 	}
 
 	return user, nil
@@ -68,6 +69,34 @@ func (usr User) GetPassword(ctx context.Context, login string) (int, string, err
 	}
 
 	return userID, hashedPassword, nil
+}
+
+func (usr User) UpdatePassword(ctx context.Context, userID int, newPassword string) error {
+	transaction, err := usr.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	result, err := transaction.ExecContext(ctx, `UPDATE users SET hashed_password = $1 WHERE users.id = $2`, newPassword, userID)
+	if err != nil {
+		return err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if count != 1 {
+		// TODO. По сути дублирование прошлого возврата. Добавить обработку ошибки count mismatch
+		return err
+	}
+
+	if err = transaction.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (usr User) Delete(ctx context.Context, userID int) error {
@@ -88,6 +117,7 @@ func (usr User) Delete(ctx context.Context, userID int) error {
 	}
 
 	if count != 1 {
+		// TODO. Дублирование прошлого возврата. Добавить обработку ошибки count mismatch
 		return err
 	}
 
