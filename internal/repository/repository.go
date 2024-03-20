@@ -12,3 +12,10 @@ type User interface {
 	UpdatePassword(ctx context.Context, userID int, newPassword string) error
 	Delete(ctx context.Context, userID int) error
 }
+
+type AdminUser interface {
+	Create(ctx context.Context, adminUserCreate entities.AdminUserCreate) (int, error)
+	Get(ctx context.Context, adminUserID int) (entities.AdminUser, error)
+	GetPassword(ctx context.Context, login string) (int, string, error)
+	Delete(ctx context.Context, adminUserID int) error
+}
